@@ -1,0 +1,88 @@
+Intel x86
+=========
+
+Registers
+---------
+
+======= ====== ======== =======
+             eax
+-------------------------------
+                      ax      
+-------------- ----------------
+                  ah       al
+======= ====== ======== =======
+
+
+All of the below are considered "general-purpose" registers; that is, most x86 instructions support using them as a source or destination operand. 
+
+- **eax** - Accumulator register. Used as a destination for some arithmetic commands. Used to store the returned result from a function.
+- **ebx** - Sometimes used by interrupts.
+- **ecx** - Counter register. Used by looping and bulk move commands.
+- **edx** - When returning a pointer result from a function in 16-bit x86, dx is used to store the segment.
+- **esi** - Source index. Used by bulk move commands
+- **edi** - Destination index. Used by bulk move commands.
+- **ebp** - Base pointer. Intended to point to the place in the stack with all the local variables for the current function. 
+
+There are three special registers
+
+- **eip** - Instruction pointer. Always points to the place in the program the CPU is executing from.
+- **esp** - Stack pointer. Always points to the top of the program's stack memory.
+- **eflags** - Status register. Contains the state of recent operations by the processor, stored as bits.
+   - **CF** - Carry flag: did the last operation produce a carried bit
+   - **ZF** - Zero flag: did the last operation equal zero
+   - **SF** - Sign flag: did the last operation produce a negative number (most significant bit set)
+   - **OF** - Overflow flag: did the last operation overflow a register (e.g. wrap around from positive to negative)
+
+   - **AF** - Adjust flag: did the last operation carry between nibbles? Something used for Binary Coded Decimal arithmetic? Uh?
+   - **PF** - Parity flag: was the number of bits in the LSB of the last result even? Used for... checksums?
+   - **DF** - Direction flag: should memory be copied in reverse? Used by bulk move commands.
+   - **IF** - Interrupt flag: should the CPU handle hardware interrupts? Almost always yes.
+   - **TF** - Trap flag: enable single-step execution of code. Not relevant for us, DOSBox's debugger runs as a hypervisor and not on the emulated CPU.
+
+Segments
+--------
+
+Segments are 16-bit IDs that refer to a chunk of memory somewhere in the address space. 
+
+In 16-bit x86 these refer to 64K (2^16) chunks of memory, meaning that big programs have to spread out over multiple segments. DOS runs in Real Mode, which is limited to a 20-bit address spaceand 1M of memory, aka. the maximum of an Intel 8088. The lower 640K of memory is known as "conventional memory", and the upper 384K is reserved for memory mapped IO. 
+
+Unfortunately 640K just wasn't enough for everybody! For the 80286 Intel increased the size of the address space to 24-bit (16M), and added Protected Mode so that the memory could be accessed. But the CPU registers were still 16-bit, so they decided to keep the 64K size limit on segments. This lead to a horrifying memory model that ranks as one of the worst architectural train wrecks in computing history.
+
+32-bit Protected Mode does away with the 64K segment size limit, and increased the size of the address space to 32-bit. Programs can have a flat memory model if the operating system supports paging.
+
+Unfortunately everything in DOS expects 16-bit and real mode! This lead to the invention of the DOS extender; basically a linking tool for developers, which builds your app to run in protected mode with compatible shims to all of the DOS APIs. DOS/4GW was a popular example. (After a while, a committee wrote down all of the absolutely skin-curling things required to make DOS applications work in protected mode, and this became known as DPMI.)
+
+**ds** - Data segment. Contains the memory to use for data operations. Used by bulk move commands.
+**cs** - Code segment. Contains the currently executing code.
+**ss** - Stack segment. Contains the program's stack memory.
+**es** - Extra segment. Used by bulk move commands.
+**fs** - Extra segment.
+**gs** - Extra segment.
+
+
+Instructions
+------------
+
+A more complete index of x86 instructions can be found `here <https://www.felixcloutier.com/x86/>`_.
+
+Both DOSBox and IDA Pro use Intel syntax, where the order is **dest** then **src**.
+
+.. code:: asm
+
+   mov eax, 9        ; eax = 9
+   add eax, ebx      ; eax += ebx
+
+
+Interrupts
+----------
+
+
+I/O Ports
+---------
+
+Another huge quirk of the x86 architecture is that originally it didn't use a unified address space and memory-mapped IO for communicating with devices. Instead there was a seperate IO bus (ISA) which allowed you to write and read bytes (one at a time!) to a port held by a piece of hardware. 
+
+IBM reserved a series of port ranges for standard PC AT hardware, but for a while it was up to hardware vendors to pick a fixed range or add some config jumpers to their device. As a result there was no guarantee that third party products would work together due to conflicts. Microsoft eventually tried to fix this with Plug and Play, which tried to bodge around this with hacky autodetection and terrifying BIOS extensions. 
+
+
+
